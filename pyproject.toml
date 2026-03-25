@@ -27,6 +27,9 @@ dev = [
     "ruff>=0.9,<1",
 ]
 
+[tool.setuptools.packages.find]
+include = ["app*", "trigger*"]
+
 [build-system]
 requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"
