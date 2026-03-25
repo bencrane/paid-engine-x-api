@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth.middleware import JWTAuthMiddleware
 from app.auth.router import router as auth_router
+from app.campaigns.router import router as campaigns_router
 from app.config import settings
 from app.shared.models import HealthResponse
 from app.tenants.router import router as tenants_router
@@ -28,6 +29,7 @@ app.add_middleware(
 # --- Routers ---
 
 app.include_router(auth_router)
+app.include_router(campaigns_router)
 app.include_router(tenants_router)
 
 
