@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     DATA_ENGINE_X_BASE_URL: str = ""
     DATA_ENGINE_X_API_TOKEN: str = ""
 
+    # hubspot-engine-x (injected by Doppler via `doppler run`)
+    HUBSPOT_ENGINE_X_BASE_URL: str = ""
+    HUBSPOT_ENGINE_X_API_TOKEN: str = ""
+
     # Anthropic (injected by Doppler via `doppler run`)
     ANTHROPIC_API_KEY: str = ""
 
