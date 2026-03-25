@@ -2,9 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth.middleware import JWTAuthMiddleware
+from app.assets.router import router as assets_router
 from app.auth.router import router as auth_router
 from app.campaigns.router import router as campaigns_router
 from app.config import settings
+from app.landing_pages.router import router as landing_pages_router
 from app.shared.models import HealthResponse
 from app.tenants.router import router as tenants_router
 
@@ -29,7 +31,9 @@ app.add_middleware(
 # --- Routers ---
 
 app.include_router(auth_router)
+app.include_router(assets_router)
 app.include_router(campaigns_router)
+app.include_router(landing_pages_router)
 app.include_router(tenants_router)
 
 

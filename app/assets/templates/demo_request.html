@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ headline }} | {{ branding.company_name }}</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:{{ branding.font_family }};color:#1a1a2e;background:#fafafa;line-height:1.6;-webkit-font-smoothing:antialiased}
+.page-wrap{max-width:1080px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+.hero{background:{{ branding.secondary_color }};color:#fff;padding:64px 40px;text-align:center}
+.hero-logo{max-height:40px;margin-bottom:32px}
+.hero h1{font-size:2.25rem;font-weight:700;line-height:1.2;max-width:720px;margin:0 auto 14px}
+.hero p{font-size:1.1rem;opacity:.85;max-width:560px;margin:0 auto}
+.benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:#fff;border-bottom:1px solid #e4e4e7}
+.benefit{padding:40px 32px;border-right:1px solid #e4e4e7;text-align:center}
+.benefit:last-child{border-right:none}
+.benefit-icon{width:48px;height:48px;border-radius:12px;background:{{ branding.primary_color }}18;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.benefit-icon::after{content:"";width:20px;height:20px;border-radius:50%;background:{{ branding.primary_color }}}
+.benefit h3{font-size:1.1rem;font-weight:600;margin-bottom:8px;color:{{ branding.secondary_color }}}
+.benefit p{font-size:.9rem;color:#555;line-height:1.5}
+.benefit ul{list-style:none;text-align:left;margin-top:10px}
+.benefit ul li{font-size:.88rem;color:#555;padding:4px 0 4px 16px;position:relative}
+.benefit ul li::before{content:"→";position:absolute;left:0;color:{{ branding.primary_color }};font-weight:600}
+.trust-section{text-align:center;padding:40px;background:#f8f8fa}
+.trust-section .quote{font-size:1.1rem;font-style:italic;color:#333;max-width:600px;margin:0 auto 8px}
+.trust-section .quote-attr{font-size:.85rem;color:#777}
+.stats-row{display:flex;gap:32px;justify-content:center;flex-wrap:wrap}
+.stat-item{text-align:center}
+.stat-item .val{font-size:2rem;font-weight:700;color:{{ branding.primary_color }}}
+.stat-item .lbl{font-size:.8rem;color:#777;text-transform:uppercase;letter-spacing:.04em}
+.form-section{padding:56px 40px;text-align:center;background:#fff;flex:1}
+.form-section h2{font-size:1.5rem;font-weight:600;margin-bottom:8px;color:{{ branding.secondary_color }}}
+.form-section .sub{font-size:.95rem;color:#888;margin-bottom:32px}
+.form-wrap{max-width:520px;margin:0 auto;text-align:left}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:.85rem;font-weight:500;margin-bottom:6px;color:#444}
+.field input,.field select,.field textarea{width:100%;padding:10px 14px;border:1px solid #d4d4d8;border-radius:6px;font-size:.95rem;font-family:inherit;transition:border-color .15s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:{{ branding.primary_color }};box-shadow:0 0 0 3px {{ branding.primary_color }}22}
+.cta-btn{width:100%;padding:14px;background:{{ branding.primary_color }};color:{{ branding.secondary_color }};font-size:1rem;font-weight:600;border:none;border-radius:8px;cursor:pointer;transition:opacity .15s}
+.cta-btn:hover{opacity:.88}
+.thank-you{display:none;text-align:center;padding:48px 24px}
+.thank-you h3{font-size:1.5rem;font-weight:600;margin-bottom:8px;color:{{ branding.secondary_color }}}
+.thank-you p{color:#555}
+footer{text-align:center;padding:32px;font-size:.8rem;color:#aaa;border-top:1px solid #eee}
+@media(max-width:768px){
+  .hero{padding:40px 20px}.hero h1{font-size:1.6rem}
+  .benefits{grid-template-columns:1fr}.benefit{border-right:none;border-bottom:1px solid #e4e4e7}
+  .form-section{padding:32px 20px}
+  .form-row{grid-template-columns:1fr}
+  .trust-section{padding:28px 20px}.stats-row{gap:20px}
+}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <header class="hero">
+    {% if branding.logo_url %}<img src="{{ branding.logo_url }}" alt="{{ branding.company_name }}" class="hero-logo">{% endif %}
+    <h1>{{ headline }}</h1>
+    <p>{{ subhead }}</p>
+  </header>
+
+  <div class="benefits">
+    {% for b in benefits %}
+    <div class="benefit">
+      <div class="benefit-icon"></div>
+      <h3>{{ b.heading }}</h3>
+      <p>{{ b.body }}</p>
+      {% if b.bullets %}
+      <ul>{% for item in b.bullets %}<li>{{ item }}</li>{% endfor %}</ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if trust_signals %}
+  <div class="trust-section">
+    {% if trust_signals.type == "quote" and trust_signals.quote_text %}
+      <p class="quote">"{{ trust_signals.quote_text }}"</p>
+      {% if trust_signals.quote_author %}<p class="quote-attr">— {{ trust_signals.quote_author }}{% if trust_signals.quote_title %}, {{ trust_signals.quote_title }}{% endif %}</p>{% endif %}
+    {% elif trust_signals.type == "stats" and trust_signals.stats %}
+      <div class="stats-row">
+        {% for stat in trust_signals.stats %}
+        <div class="stat-item"><div class="val">{{ stat.value }}</div><div class="lbl">{{ stat.label }}</div></div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="form-section" id="form-section">
+    <h2>See {{ branding.company_name }} in Action</h2>
+    <p class="sub">Fill out the form and we'll schedule a personalized demo.</p>
+    <div class="form-wrap" id="form-wrapper">
+      <form id="lp-form" method="POST" action="/lp/{{ slug }}/submit">
+        {% for field in form_fields %}
+        <div class="field">
+          <label for="{{ field.name }}">{{ field.label }}</label>
+          {% if field.type == "select" %}
+          <select id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}><option value="">Select…</option></select>
+          {% elif field.type == "textarea" %}
+          <textarea id="{{ field.name }}" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %}></textarea>
+          {% else %}
+          <input type="{{ field.type }}" id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
+          {% endif %}
+        </div>
+        {% endfor %}
+        <input type="hidden" name="utm_source" id="utm_source">
+        <input type="hidden" name="utm_medium" id="utm_medium">
+        <input type="hidden" name="utm_campaign" id="utm_campaign">
+        <button type="submit" class="cta-btn">{{ cta_text }}</button>
+      </form>
+    </div>
+
+    <div class="thank-you" id="thank-you">
+      <h3>Thank You!</h3>
+      <p>Our team will reach out within 24 hours to schedule your demo.</p>
+    </div>
+  </div>
+
+  <footer>&copy; {{ branding.company_name }}</footer>
+</div>
+
+{% if tracking.rudderstack_write_key and tracking.rudderstack_data_plane_url %}
+<script>!function(){var e=window.rudderanalytics=[];e.methods=["load","page","track","identify","alias","group","ready","reset","getAnonymousId","setAnonymousId"],e.factory=function(t){return function(){var r=Array.prototype.slice.call(arguments);return r.unshift(t),e.push(r),e}};for(var t=0;t<e.methods.length;t++){var r=e.methods[t];e[r]=e.factory(r)}e.loadJS=function(e,t){var r=document.createElement("script");r.type="text/javascript",r.async=!0,r.src="https://cdn.rudderlabs.com/v1.1/rudder-analytics.min.js";var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(r,a)},e.loadJS(),
+e.load("{{ tracking.rudderstack_write_key }}","{{ tracking.rudderstack_data_plane_url }}"),e.page()}();</script>
+{% endif %}
+
+<script>
+(function(){
+  var params=new URLSearchParams(window.location.search);
+  ["utm_source","utm_medium","utm_campaign"].forEach(function(k){
+    var v=params.get(k);if(v){var el=document.getElementById(k);if(el)el.value=v;}
+  });
+
+  var form=document.getElementById("lp-form");
+  form.addEventListener("submit",function(e){
+    e.preventDefault();
+    var fd=new FormData(form);
+    var data={};fd.forEach(function(v,k){data[k]=v;});
+
+    {% if tracking.rudderstack_write_key %}
+    if(window.rudderanalytics){
+      rudderanalytics.identify(data.email||"",data);
+      rudderanalytics.track("form_submitted",{slug:"{{ slug }}",template:"demo_request"});
+    }
+    {% endif %}
+
+    fetch(form.action,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)})
+      .then(function(){
+        document.getElementById("form-wrapper").style.display="none";
+        document.getElementById("thank-you").style.display="block";
+      })
+      .catch(function(){
+        document.getElementById("form-wrapper").style.display="none";
+        document.getElementById("thank-you").style.display="block";
+      });
+  });
+})();
+</script>
+</body>
+</html>
