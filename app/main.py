@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.auth.middleware import JWTAuthMiddleware
 from app.assets.router import router as assets_router
+from app.auth.linkedin import router as linkedin_auth_router
+from app.auth.middleware import JWTAuthMiddleware
 from app.auth.router import router as auth_router
 from app.campaigns.router import router as campaigns_router
 from app.config import settings
@@ -31,6 +32,7 @@ app.add_middleware(
 # --- Routers ---
 
 app.include_router(auth_router)
+app.include_router(linkedin_auth_router)
 app.include_router(assets_router)
 app.include_router(campaigns_router)
 app.include_router(landing_pages_router)
