@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     META_API_VERSION: str = "v25.0"
     META_SYSTEM_USER_ID: str = ""
 
+    # Google Ads OAuth + API
+    GOOGLE_ADS_CLIENT_ID: str = ""
+    GOOGLE_ADS_CLIENT_SECRET: str = ""
+    GOOGLE_ADS_REDIRECT_URI: str = ""
+    GOOGLE_ADS_DEVELOPER_TOKEN: str = ""  # App-level, NOT per-tenant
+    GOOGLE_ADS_MCC_ID: str = ""  # App-level MCC customer ID (no hyphens)
+
     # Anthropic (injected by Doppler via `doppler run`)
     ANTHROPIC_API_KEY: str = ""
 
