@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import logging
 from typing import Any
 
@@ -13,6 +14,7 @@ from app.integrations.linkedin_models import (
     LinkedInCampaign,
     LinkedInCampaignGroup,
     LinkedInCreative,
+    LinkedInDMPSegment,
 )
 from app.integrations.linkedin_targeting import validate_campaign_config
 
@@ -85,6 +87,16 @@ def make_org_urn(org_id: int) -> str:
 
 def make_campaign_group_urn(group_id: int) -> str:
     return f"urn:li:sponsoredCampaignGroup:{group_id}"
+
+
+def hash_email_for_linkedin(email: str) -> str:
+    """Lowercase, strip whitespace, then SHA256 hash.
+
+    CRITICAL: order matters — lowercase + strip BEFORE hashing.
+    Wrong order = 200 response, 0 matches.
+    """
+    normalized = email.lower().strip()
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
 # Valid status transitions for campaigns
@@ -846,3 +858,223 @@ class LinkedInAdsClient:
             campaign_id=campaign_id,
             post_urn=post_urn,
         )
+
+    # --- DMP Segment (Matched Audiences) methods ---
+
+    async def create_dmp_segment(
+        self,
+        account_id: int,
+        name: str,
+        segment_type: str,
+    ) -> dict[str, Any]:
+        """Create a DMP segment (staging bucket for audience data).
+
+        POST /dmpSegments
+        segment_type: "COMPANY" or "USER"
+        Returns segment with id, status (BUILDING initially).
+        """
+        return await self.post(
+            "/dmpSegments",
+            json={
+                "name": name,
+                "type": segment_type,
+                "account": make_account_urn(account_id),
+                "sources": ["FIRST_PARTY"],
+            },
+        )
+
+    async def _batch_upload(
+        self,
+        segment_id: str,
+        items: list,
+        upload_fn: Any,
+        batch_size: int = 5000,
+        delay_between_batches: float = 0.2,
+    ) -> dict[str, Any]:
+        """Split items into batches and upload sequentially with delay.
+
+        Returns: {total_sent, batches_completed, errors}.
+        """
+        total_sent = 0
+        batches_completed = 0
+        errors: list[str] = []
+
+        for i in range(0, len(items), batch_size):
+            batch = items[i : i + batch_size]
+            try:
+                await upload_fn(segment_id, batch)
+                total_sent += len(batch)
+                batches_completed += 1
+            except LinkedInAPIError as e:
+                errors.append(f"Batch {batches_completed + 1}: {e.message}")
+
+            if i + batch_size < len(items):
+                await asyncio.sleep(delay_between_batches)
+
+        return {
+            "total_sent": total_sent,
+            "batches_completed": batches_completed,
+            "errors": errors,
+        }
+
+    async def _upload_company_batch(
+        self, segment_id: str, companies: list[dict]
+    ) -> dict[str, Any]:
+        """Upload a single batch of companies to a DMP segment."""
+        elements = [
+            {
+                "action": companies[0].get("_action", "ADD"),
+                "companyIdentifiers": {
+                    k: v
+                    for k, v in company.items()
+                    if k != "_action"
+                },
+            }
+            for company in companies
+        ]
+        return await self.post(
+            f"/dmpSegments/{segment_id}/companies",
+            json={"elements": elements},
+        )
+
+    async def _upload_contact_batch(
+        self, segment_id: str, hashed_elements: list[dict]
+    ) -> dict[str, Any]:
+        """Upload a single batch of hashed contacts to a DMP segment."""
+        return await self.post(
+            f"/dmpSegments/{segment_id}/users",
+            json={"elements": hashed_elements},
+        )
+
+    async def stream_companies(
+        self,
+        segment_id: str,
+        companies: list[dict],
+        action: str = "ADD",
+    ) -> dict[str, Any]:
+        """Stream company list to a DMP segment.
+
+        POST /dmpSegments/{segmentId}/companies
+        Max 5,000 records per batch. Auto-batches if more.
+        Rate limit: 300 requests/minute.
+        """
+        # Tag each company with the action for batch processing
+        tagged = [{**c, "_action": action} for c in companies]
+
+        return await self._batch_upload(
+            segment_id=segment_id,
+            items=tagged,
+            upload_fn=self._upload_company_batch,
+            batch_size=5000,
+            delay_between_batches=0.2,
+        )
+
+    async def stream_contacts(
+        self,
+        segment_id: str,
+        emails: list[str],
+        action: str = "ADD",
+    ) -> dict[str, Any]:
+        """Stream hashed email list to a DMP segment.
+
+        POST /dmpSegments/{segmentId}/users
+        Emails are lowercased, stripped, then SHA256 hashed before sending.
+        Max 5,000 records per batch. Auto-batches if more.
+        Rate limit: 600 requests/minute.
+        """
+        elements = [
+            {
+                "action": action,
+                "userIdentifiers": {
+                    "hashedEmail": {
+                        "hashType": "SHA256",
+                        "hashValue": hash_email_for_linkedin(email),
+                    }
+                },
+            }
+            for email in emails
+        ]
+
+        return await self._batch_upload(
+            segment_id=segment_id,
+            items=elements,
+            upload_fn=self._upload_contact_batch,
+            batch_size=5000,
+            delay_between_batches=0.2,
+        )
+
+    async def get_dmp_segment_status(
+        self, segment_id: str
+    ) -> LinkedInDMPSegment:
+        """GET /dmpSegments/{segmentId}
+
+        Returns parsed segment with status, matchedMemberCount,
+        destinationSegmentId.
+        """
+        resp = await self.get(f"/dmpSegments/{segment_id}")
+        return LinkedInDMPSegment(
+            id=resp.get("id", segment_id),
+            name=resp.get("name", ""),
+            type=resp.get("type", ""),
+            status=resp.get("status", ""),
+            matched_member_count=resp.get("matchedMemberCount"),
+            destination_segment_id=resp.get("destinationSegmentId"),
+            account_urn=resp.get("account", ""),
+        )
+
+    async def delete_dmp_segment(self, segment_id: str) -> None:
+        """DELETE /dmpSegments/{segmentId}"""
+        await self.delete(f"/dmpSegments/{segment_id}")
+
+    async def list_dmp_segments(
+        self, account_id: int
+    ) -> list[LinkedInDMPSegment]:
+        """GET /dmpSegments?q=account&account=urn:li:sponsoredAccount:{id}"""
+        resp = await self.get(
+            "/dmpSegments",
+            params={
+                "q": "account",
+                "account": make_account_urn(account_id),
+            },
+        )
+        segments = []
+        for el in resp.get("elements", []):
+            segments.append(
+                LinkedInDMPSegment(
+                    id=el.get("id", ""),
+                    name=el.get("name", ""),
+                    type=el.get("type", ""),
+                    status=el.get("status", ""),
+                    matched_member_count=el.get("matchedMemberCount"),
+                    destination_segment_id=el.get(
+                        "destinationSegmentId"
+                    ),
+                    account_urn=el.get("account", ""),
+                )
+            )
+        return segments
+
+    async def wait_for_segment_ready(
+        self,
+        segment_id: str,
+        max_wait_minutes: int = 60,
+        poll_interval_seconds: int = 30,
+    ) -> LinkedInDMPSegment:
+        """Poll segment status until READY or timeout.
+
+        Initial matching takes up to 48 hours — this is for subsequent
+        updates which are near-real-time.
+        """
+        terminal_statuses = {"READY", "FAILED", "ARCHIVED", "EXPIRED"}
+        elapsed = 0
+        max_seconds = max_wait_minutes * 60
+
+        while elapsed < max_seconds:
+            segment = await self.get_dmp_segment_status(segment_id)
+            if segment.status in terminal_statuses:
+                return segment
+            await asyncio.sleep(poll_interval_seconds)
+            elapsed += poll_interval_seconds
+
+        # Return last known status on timeout
+        return await self.get_dmp_segment_status(segment_id)

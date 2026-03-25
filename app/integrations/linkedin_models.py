@@ -69,6 +69,26 @@ class LinkedInCreativeCreate(BaseModel):
     lead_gen_form_id: int | None = None
 
 
+class LinkedInDMPSegment(BaseModel):
+    id: str
+    name: str
+    type: str  # COMPANY, USER
+    status: str  # BUILDING, READY, UPDATING, FAILED, ARCHIVED, EXPIRED
+    matched_member_count: int | None = None
+    destination_segment_id: str | None = None  # adSegment URN for targeting
+    account_urn: str
+
+
+class LinkedInAudienceSyncResult(BaseModel):
+    segment_id: str
+    segment_type: str
+    total_uploaded: int
+    batches_completed: int
+    status: str
+    matched_count: int | None = None
+    ad_segment_urn: str | None = None  # Available when status=READY
+
+
 class LinkedInAPIErrorDetail(BaseModel):
     status: int
     service_error_code: int | None = None
