@@ -121,8 +121,13 @@ class TestUserPrompt:
 
 class TestRegistry:
     def setup_method(self):
-        # Clean registry before each test
+        # Save and restore registry so other generators aren't lost
+        self._saved_registry = dict(GENERATOR_REGISTRY)
         GENERATOR_REGISTRY.clear()
+
+    def teardown_method(self):
+        GENERATOR_REGISTRY.clear()
+        GENERATOR_REGISTRY.update(self._saved_registry)
 
     def test_register_and_get(self):
         gen = SampleGenerator()
