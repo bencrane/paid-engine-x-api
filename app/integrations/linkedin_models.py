@@ -51,6 +51,24 @@ class LinkedInCampaignCreate(BaseModel):
     targeting: dict  # Pre-built targeting criteria
 
 
+class LinkedInCreative(BaseModel):
+    id: int
+    campaign_urn: str
+    content_reference: str  # post URN
+    intended_status: str
+    review_status: str | None = None
+    serving_statuses: list[str] | None = None
+
+
+class LinkedInCreativeCreate(BaseModel):
+    campaign_id: int
+    media_type: str  # image, document, video, inmail
+    media_url: str | None = None
+    commentary: str
+    title: str
+    lead_gen_form_id: int | None = None
+
+
 class LinkedInAPIErrorDetail(BaseModel):
     status: int
     service_error_code: int | None = None

@@ -12,6 +12,7 @@ from app.integrations.linkedin_models import (
     LinkedInAPIErrorDetail,
     LinkedInCampaign,
     LinkedInCampaignGroup,
+    LinkedInCreative,
 )
 from app.integrations.linkedin_targeting import validate_campaign_config
 
@@ -233,6 +234,51 @@ class LinkedInAdsClient:
         self, path: str, json: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         return await self._request("PATCH", path, json=json)
+
+    async def _request_raw(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any] | None = None,
+        json: dict[str, Any] | None = None,
+    ) -> httpx.Response:
+        """Like _request but returns the raw httpx.Response (for headers)."""
+        url = f"{self.BASE_URL}{path}"
+        headers = await self._get_headers()
+
+        for attempt in range(self.MAX_RETRIES + 1):
+            resp = await self._client.request(
+                method, url, headers=headers, params=params, json=json
+            )
+
+            if resp.status_code == 429:
+                if attempt >= self.MAX_RETRIES:
+                    raise LinkedInRateLimitError()
+                delay = min(
+                    self.BACKOFF_BASE * (2**attempt), self.BACKOFF_CAP
+                )
+                await asyncio.sleep(delay)
+                headers = await self._get_headers()
+                continue
+
+            if resp.status_code >= 400:
+                self._raise_for_status(resp)
+
+            return resp
+
+        raise LinkedInAPIError(500, None, "Unexpected retry exhaustion")
+
+    async def _upload_binary(
+        self, upload_url: str, data: bytes
+    ) -> None:
+        """PUT binary data to a LinkedIn upload URL."""
+        headers = await self._get_headers()
+        headers["Content-Type"] = "application/octet-stream"
+        resp = await self._client.put(
+            upload_url, headers=headers, content=data
+        )
+        if resp.status_code >= 400:
+            self._raise_for_status(resp)
 
     async def delete(self, path: str) -> None:
         await self._request("DELETE", path)
@@ -471,4 +517,332 @@ class LinkedInAdsClient:
                 f"{sorted(allowed) if allowed else 'none'}",
             )
 
-        await self.update_campaign(account_id, campaign_id, {"status": status})
+        await self.update_campaign(
+            account_id, campaign_id, {"status": status}
+        )
+
+    # --- Media upload methods ---
+
+    async def upload_image(self, org_id: int, image_bytes: bytes) -> str:
+        """Upload image and return image URN.
+
+        1. POST /images?action=initializeUpload → get uploadUrl + image URN
+        2. PUT {uploadUrl} with binary data
+        Returns: urn:li:image:{id}
+        """
+        init_resp = await self.post(
+            "/images?action=initializeUpload",
+            json={
+                "initializeUploadRequest": {
+                    "owner": make_org_urn(org_id),
+                }
+            },
+        )
+        upload_url = init_resp["value"]["uploadUrl"]
+        image_urn = init_resp["value"]["image"]
+
+        await self._upload_binary(upload_url, image_bytes)
+        return image_urn
+
+    async def upload_document(
+        self, org_id: int, doc_bytes: bytes
+    ) -> str:
+        """Upload document and return document URN.
+
+        1. POST /documents?action=initializeUpload → get uploadUrl + doc URN
+        2. PUT {uploadUrl} with binary data
+        Returns: urn:li:document:{id}
+        """
+        init_resp = await self.post(
+            "/documents?action=initializeUpload",
+            json={
+                "initializeUploadRequest": {
+                    "owner": make_org_urn(org_id),
+                }
+            },
+        )
+        upload_url = init_resp["value"]["uploadUrl"]
+        doc_urn = init_resp["value"]["document"]
+
+        await self._upload_binary(upload_url, doc_bytes)
+        return doc_urn
+
+    async def upload_video(
+        self, org_id: int, video_bytes: bytes, file_size: int
+    ) -> str:
+        """Upload video and return video URN.
+
+        1. POST /videos?action=initializeUpload → get uploadInstructions
+        2. PUT each chunk to its uploadUrl
+        3. POST /videos?action=finalizeUpload with uploadedPartIds
+        Returns: urn:li:video:{id}
+        """
+        init_resp = await self.post(
+            "/videos?action=initializeUpload",
+            json={
+                "initializeUploadRequest": {
+                    "owner": make_org_urn(org_id),
+                    "fileSizeBytes": file_size,
+                    "uploadCaptions": False,
+                    "uploadThumbnail": False,
+                }
+            },
+        )
+        video_urn = init_resp["value"]["video"]
+        instructions = init_resp["value"]["uploadInstructions"]
+
+        # Upload chunks according to instructions
+        uploaded_part_ids = []
+        offset = 0
+        for instruction in instructions:
+            chunk_url = instruction["uploadUrl"]
+            # Each instruction covers a segment of the file
+            last_byte = instruction.get("lastByte", file_size - 1)
+            first_byte = instruction.get("firstByte", offset)
+            chunk = video_bytes[first_byte : last_byte + 1]
+
+            headers = await self._get_headers()
+            headers["Content-Type"] = "application/octet-stream"
+            resp = await self._client.put(
+                chunk_url, headers=headers, content=chunk
+            )
+            if resp.status_code >= 400:
+                self._raise_for_status(resp)
+
+            # Collect the ETag or part ID from response
+            etag = resp.headers.get("etag", "")
+            uploaded_part_ids.append(etag)
+            offset = last_byte + 1
+
+        # Finalize
+        await self.post(
+            "/videos?action=finalizeUpload",
+            json={
+                "finalizeUploadRequest": {
+                    "video": video_urn,
+                    "uploadToken": "",
+                    "uploadedPartIds": uploaded_part_ids,
+                }
+            },
+        )
+        return video_urn
+
+    # --- Post creation ---
+
+    async def create_sponsored_post(
+        self,
+        org_id: int,
+        commentary: str,
+        media_urn: str,
+        media_title: str,
+    ) -> str:
+        """Create a post suitable for sponsored content.
+
+        Sets distribution.feedDistribution = NONE (ad-only, not organic).
+        Returns post URN from x-restli-id header.
+        """
+        resp = await self._request_raw(
+            "POST",
+            "/posts",
+            json={
+                "author": make_org_urn(org_id),
+                "commentary": commentary,
+                "visibility": "PUBLIC",
+                "distribution": {
+                    "feedDistribution": "NONE",
+                    "targetEntities": [],
+                    "thirdPartyDistributionChannels": [],
+                },
+                "content": {
+                    "media": {
+                        "title": media_title,
+                        "id": media_urn,
+                    }
+                },
+                "lifecycleState": "PUBLISHED",
+                "isReshareDisabledByAuthor": False,
+            },
+        )
+        # Post URN returned in x-restli-id header
+        post_urn = resp.headers.get("x-restli-id", "")
+        if not post_urn:
+            # Fallback: try response body
+            body = resp.json() if resp.status_code != 204 else {}
+            post_urn = body.get("id", "")
+        return post_urn
+
+    # --- Creative CRUD ---
+
+    async def create_creative(
+        self,
+        account_id: int,
+        campaign_id: int,
+        post_urn: str,
+        lead_gen_form_urn: str | None = None,
+        status: str = "ACTIVE",
+    ) -> dict[str, Any]:
+        """Create a creative referencing a post."""
+        content: dict[str, Any] = {"reference": post_urn}
+        if lead_gen_form_urn:
+            content["leadGenerationContext"] = {
+                "leadGenerationFormUrn": lead_gen_form_urn,
+            }
+
+        return await self.post(
+            f"/adAccounts/{account_id}/adCreatives",
+            json={
+                "campaign": make_campaign_urn(campaign_id),
+                "content": content,
+                "intendedStatus": status,
+            },
+        )
+
+    async def get_creatives(
+        self,
+        account_id: int,
+        campaign_id: int | None = None,
+    ) -> list[LinkedInCreative]:
+        """List creatives, optionally filtered by campaign."""
+        params: dict[str, str] = {"q": "search"}
+        if campaign_id:
+            campaign_urn = make_campaign_urn(campaign_id)
+            params["search"] = (
+                f"(campaign:(values:List({campaign_urn})))"
+            )
+
+        resp = await self.get(
+            f"/adAccounts/{account_id}/adCreatives",
+            params=params,
+        )
+        creatives = []
+        for el in resp.get("elements", []):
+            cid = extract_id_from_urn(
+                el.get("id", el.get("urn", ""))
+            )
+            creatives.append(
+                LinkedInCreative(
+                    id=cid,
+                    campaign_urn=el.get("campaign", ""),
+                    content_reference=el.get(
+                        "content", {}
+                    ).get("reference", ""),
+                    intended_status=el.get("intendedStatus", ""),
+                    review_status=el.get("reviewStatus"),
+                    serving_statuses=el.get("servingStatuses"),
+                )
+            )
+        return creatives
+
+    async def update_creative_status(
+        self, account_id: int, creative_id: int, status: str
+    ) -> None:
+        """Update creative status (ACTIVE, PAUSED, ARCHIVED)."""
+        await self.patch(
+            f"/adAccounts/{account_id}/adCreatives/{creative_id}",
+            json={
+                "patch": {"$set": {"intendedStatus": status}}
+            },
+        )
+
+    # --- InMail content ---
+
+    async def create_inmail_content(
+        self,
+        account_id: int,
+        name: str,
+        subject: str,
+        html_body: str,
+        sender_urn: str,
+        cta_label: str,
+        cta_url: str,
+    ) -> str:
+        """Create InMail content for message ads.
+
+        Returns adInMailContent URN.
+        Validates: subject max 60 chars, body max 1500 chars,
+        CTA label max 20 chars.
+        """
+        if len(subject) > 60:
+            raise LinkedInAPIError(
+                400, None,
+                f"InMail subject exceeds 60 chars ({len(subject)})",
+            )
+        if len(html_body) > 1500:
+            raise LinkedInAPIError(
+                400, None,
+                f"InMail body exceeds 1500 chars ({len(html_body)})",
+            )
+        if len(cta_label) > 20:
+            raise LinkedInAPIError(
+                400, None,
+                f"InMail CTA label exceeds 20 chars ({len(cta_label)})",
+            )
+
+        resp = await self._request_raw(
+            "POST",
+            "/adInMailContents",
+            json={
+                "account": make_account_urn(account_id),
+                "name": name,
+                "subject": subject,
+                "htmlBody": html_body,
+                "sender": sender_urn,
+                "ctaLabel": cta_label,
+                "ctaUrl": cta_url,
+            },
+        )
+        inmail_urn = resp.headers.get("x-restli-id", "")
+        if not inmail_urn:
+            body = resp.json() if resp.status_code != 204 else {}
+            inmail_urn = body.get("id", "")
+        return inmail_urn
+
+    # --- End-to-end creative pipeline helpers ---
+
+    async def create_image_ad(
+        self,
+        account_id: int,
+        campaign_id: int,
+        org_id: int,
+        image_bytes: bytes,
+        headline: str,
+        intro_text: str,
+        lead_gen_form_urn: str | None = None,
+    ) -> dict[str, Any]:
+        """Convenience: upload image → create post → create creative."""
+        image_urn = await self.upload_image(org_id, image_bytes)
+        post_urn = await self.create_sponsored_post(
+            org_id=org_id,
+            commentary=intro_text,
+            media_urn=image_urn,
+            media_title=headline,
+        )
+        return await self.create_creative(
+            account_id=account_id,
+            campaign_id=campaign_id,
+            post_urn=post_urn,
+            lead_gen_form_urn=lead_gen_form_urn,
+        )
+
+    async def create_document_ad(
+        self,
+        account_id: int,
+        campaign_id: int,
+        org_id: int,
+        pdf_bytes: bytes,
+        title: str,
+        commentary: str,
+    ) -> dict[str, Any]:
+        """Convenience: upload document → create post → create creative."""
+        doc_urn = await self.upload_document(org_id, pdf_bytes)
+        post_urn = await self.create_sponsored_post(
+            org_id=org_id,
+            commentary=commentary,
+            media_urn=doc_urn,
+            media_title=title,
+        )
+        return await self.create_creative(
+            account_id=account_id,
+            campaign_id=campaign_id,
+            post_urn=post_urn,
+        )
