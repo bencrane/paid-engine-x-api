@@ -5,6 +5,7 @@ from supabase import Client as SupabaseClient
 from app.auth.models import UserProfile
 from app.db.clickhouse import get_clickhouse_client
 from app.db.supabase import get_supabase_client
+from app.integrations.claude_ai import ClaudeClient
 from app.shared.errors import NotFoundError, UnauthorizedError
 from app.tenants.models import Organization
 from app.tenants.service import resolve_tenant
@@ -40,6 +41,10 @@ async def get_current_user(
     email = getattr(request.state, "jwt_payload", {}).get("email", "")
 
     return UserProfile(email=email, **res.data)
+
+
+async def get_claude() -> ClaudeClient:
+    return ClaudeClient()
 
 
 async def get_tenant(
