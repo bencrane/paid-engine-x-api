@@ -1,7 +1,7 @@
 [project]
-name = "paid-edge-backend-api"
+name = "paid-engine-x-api"
 version = "0.1.0"
-description = "PaidEdge backend API — FastAPI + Supabase + ClickHouse"
+description = "paid-engine-x API — FastAPI + Supabase + ClickHouse"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115,<1",

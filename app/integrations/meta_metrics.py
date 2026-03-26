@@ -125,7 +125,7 @@ async def insert_meta_metrics(
     clickhouse,
     metrics: list[dict],
 ) -> int:
-    """Batch insert mapped metrics into paid_edge.campaign_metrics."""
+    """Batch insert mapped metrics into paid_engine_x_api.campaign_metrics."""
     if not metrics:
         return 0
 
@@ -140,7 +140,7 @@ async def insert_meta_metrics(
         for m in metrics
     ]
     clickhouse.insert(
-        "paid_edge.campaign_metrics",
+        "paid_engine_x_api.campaign_metrics",
         data,
         column_names=columns,
     )

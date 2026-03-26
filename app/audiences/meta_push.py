@@ -66,7 +66,7 @@ async def sync_segment_to_meta(
     # Step 3: Load members from ClickHouse
     query = (
         f"SELECT entity_id, email, full_name "
-        f"FROM paid_edge.audience_segment_members "
+        f"FROM paid_engine_x_api.audience_segment_members "
         f"WHERE tenant_id = '{tenant_id}' AND segment_id = '{segment_id}'"
     )
     members_result = clickhouse.query(query)

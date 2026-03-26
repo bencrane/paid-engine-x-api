@@ -554,7 +554,7 @@ class TestInsertLinkedInMetrics:
         assert result == 1
         mock_ch.insert.assert_called_once()
         call_args = mock_ch.insert.call_args
-        assert call_args.args[0] == "paid_edge.campaign_metrics"
+        assert call_args.args[0] == "paid_engine_x_api.campaign_metrics"
         # Verify data structure
         data = call_args.args[1]
         assert len(data) == 1

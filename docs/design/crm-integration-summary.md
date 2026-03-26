@@ -3,7 +3,7 @@
 ## Deliverables
 
 ### Design Docs (PR #14)
-- [PR #14 — CRM Integration Design Docs](https://github.com/bencrane/paid-edge-backend-api/pull/14) on branch `docs/crm-integration-design`
+- [PR #14 — CRM Integration Design Docs](https://github.com/bencrane/paid-engine-x-api/pull/14) on branch `docs/crm-integration-design`
   - `docs/design/salesforce-crm-integration.md`
   - `docs/design/hubspot-crm-integration.md`
 
@@ -100,7 +100,7 @@ The single blocker for the Salesforce path is the missing SOQL query proxy in `s
 - Auth: per-tenant OAuth2 with token refresh, stored in Supabase
 - Stack: Express.js + TypeScript, @hubspot/api-client
 
-### paid-edge-backend-api
+### paid-engine-x-api
 - Existing `DataEngineXClient` pattern for service-to-service calls (reference implementation)
 - ClickHouse tables: `campaign_metrics`, `ad_performance`, `attribution_events` — CRM tables will follow same patterns
 - Trigger.dev fan-out pattern: `syncAdMetrics` task iterates tenants, spawns per-tenant sub-tasks

@@ -4,7 +4,7 @@
 **Date:** March 24, 2026  
 **Author:** Benjamin, Outbound Solutions  
 **Status:** Ready for build (canonical)  
-**Companion specs:** `PaidEdge_Backend_Spec.md`, `PaidEdge_Frontend_Spec.md`
+**Companion specs:** `paid_engine_x_Backend_Spec.md`, `PaidEdge_Frontend_Spec.md`
 
 > This is the single canonical PRD for PaidEdge. It supersedes `PaidEdge_PRD_v2.md` and incorporates all decisions from `PaidEdge_Spec_Updates.md`. Someone reading only this file should understand the full product.
 
@@ -230,7 +230,7 @@ Customers can optionally connect their own tools. Nothing breaks without them:
 
 | Component | Role |
 |-----------|------|
-| **ClickHouse Cloud** | Metrics warehouse — campaign metrics, CRM data, behavioral events, audience members, web intent results. Existing instance (`gf9xtjjqyl.us-east-1.aws.clickhouse.cloud`), new `paid_edge` database. |
+| **ClickHouse Cloud** | Metrics warehouse — campaign metrics, CRM data, behavioral events, audience members, web intent results. Existing instance (`gf9xtjjqyl.us-east-1.aws.clickhouse.cloud`), new `paid_engine_x_api` database. |
 | **Supabase** | Entity DB + auth + multi-tenancy. New project (separate from data-engine-x). Organizations, users, memberships, segments, campaigns, assets, competitor configs, tenant context, provider configs. |
 | **RudderStack** | Event ingestion. Existing account (`substratevyaxk.dataplane.rudderstack.com`), new sources for PaidEdge. Shared source with `tenant_id` property on all events (injected via transformation). JS SDK on customer sites + PaidEdge landing pages. Cloud Sources for ad platform and CRM data. |
 | **FastAPI** | Backend API. All business logic, integration orchestration, webhook handling. |
@@ -241,7 +241,7 @@ Customers can optionally connect their own tools. Nothing breaks without them:
 | **Claude API** | AI layer — asset generation (8 types), recommendations, chat-driven campaign builder, performance analysis. |
 | **Trigger.dev** | Async job orchestration — scheduled audience refreshes, ad platform metric pulls, CRM syncs, recommendation generation, competitor ad sync. |
 | **Railway** | Hosting for both frontend and backend services. |
-| **Doppler** | Secret management. Project: `paid-edge`, configs: `dev`/`stg`/`prd`. |
+| **Doppler** | Secret management. Project: `paid-engine-x-api`, configs: `dev`/`stg`/`prd`. |
 | **Adyntel** | Competitor ad monitoring. Pulls active competitor ads across LinkedIn, Meta, and Google. Weekly sync via Trigger.dev. |
 | **dub.co** | Tracked short links. Every campaign gets a short link (e.g., `pe.link/cmmc-q1`) for independent click attribution outside ad platform click IDs. |
 
@@ -258,7 +258,7 @@ Customers can optionally connect their own tools. Nothing breaks without them:
 
 The following already exists and will be reused/extended:
 
-- **ClickHouse Cloud instance** — deployed, connected, operational. 3 existing databases (`raw`, `raw_crm`, `core`). PaidEdge creates new `paid_edge` database alongside.
+- **ClickHouse Cloud instance** — deployed, connected, operational. 3 existing databases (`raw`, `raw_crm`, `core`). PaidEdge creates new `paid_engine_x_api` database alongside.
 - **RudderStack account** — configured with data plane, 2 existing sources, 2 ClickHouse destinations. PaidEdge creates new sources.
 - **Materialized view patterns** — 6 MVs from DemandEdge (raw→core for page views, form fills, content downloads, demo requests, CRM deal stages, CRM leads). These patterns are proven and will be referenced when building PaidEdge's ClickHouse architecture.
 - **Perplexity Computer connections** — already connected to ClickHouse and Supabase.
@@ -266,7 +266,7 @@ The following already exists and will be reused/extended:
 **Do NOT touch:** Existing DemandEdge databases, tables, sources, or MVs.
 
 Full schema definitions, API endpoint contracts, and integration specs are in the companion documents:
-- **`PaidEdge_Backend_Spec.md`** — Supabase DDL, ClickHouse DDL, all API endpoints, integration clients, Trigger.dev tasks, auth middleware
+- **`paid_engine_x_Backend_Spec.md`** — Supabase DDL, ClickHouse DDL, all API endpoints, integration clients, Trigger.dev tasks, auth middleware
 - **`PaidEdge_Frontend_Spec.md`** — Next.js route structure, page specs, component breakdown, data fetching patterns, state management, auth flow
 
 ---
@@ -340,7 +340,7 @@ Clay is not a hard dependency — PaidEdge works without it (BlitzAPI for enrich
 **M1 — Infrastructure Foundation**
 - New Supabase project with full multi-tenant schema (organizations, users, memberships, provider_configs, audience_segments, campaigns, generated_assets, competitor_configs, tenant_context)
 - RLS policies on all tables
-- New `paid_edge` database in ClickHouse with all tables (campaign_metrics, crm_opportunities, crm_contacts, behavioral_events, audience_segment_members, web_intent_results)
+- New `paid_engine_x_api` database in ClickHouse with all tables (campaign_metrics, crm_opportunities, crm_contacts, behavioral_events, audience_segment_members, web_intent_results)
 - New RudderStack sources for PaidEdge (JS SDK source, ad platform Cloud Sources, CRM Cloud Sources). Shared source with `tenant_id` property on all events.
 - FastAPI skeleton (auth middleware, tenant resolution, health checks, CORS, dependency injection)
 - Next.js skeleton (App Router, Supabase Auth, sidebar layout per section 5, org switcher, protected routes)
@@ -425,5 +425,5 @@ Clay is not a hard dependency — PaidEdge works without it (BlitzAPI for enrich
 ---
 
 *This is the canonical product definition for PaidEdge. For implementation details, see:*
-- *`PaidEdge_Backend_Spec.md` — API endpoints, database schemas, integration contracts, Trigger.dev tasks*
+- *`paid_engine_x_Backend_Spec.md` — API endpoints, database schemas, integration contracts, Trigger.dev tasks*
 - *`PaidEdge_Frontend_Spec.md` — routes, pages, components, data fetching, auth flow, state management*

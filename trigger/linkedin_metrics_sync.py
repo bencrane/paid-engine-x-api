@@ -145,7 +145,7 @@ async def linkedin_metrics_sync_task():
     4. Build campaign_id_map (LinkedIn → PaidEdge)
     5. Pull metrics for last 3 days (covers retroactive adjustments)
     6. Map to ClickHouse schema
-    7. Insert into paid_edge.campaign_metrics
+    7. Insert into paid_engine_x_api.campaign_metrics
     8. Log: tenant_id, campaigns_synced, rows_inserted, duration
 
     Per-tenant isolation: one tenant failure doesn't stop others.
