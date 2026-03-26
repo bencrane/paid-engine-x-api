@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     CLICKHOUSE_PORT: int = 8443
     CLICKHOUSE_USER: str = "default"
     CLICKHOUSE_PASSWORD: str = ""
-    CLICKHOUSE_DATABASE: str = "paid_edge"
+    CLICKHOUSE_DATABASE: str = "paid_engine_x_api"
 
     # LinkedIn OAuth
     LINKEDIN_CLIENT_ID: str = ""

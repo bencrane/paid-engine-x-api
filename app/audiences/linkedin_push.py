@@ -26,7 +26,7 @@ class LinkedInAudiencePushService:
         """Read segment members from ClickHouse."""
         query = (
             "SELECT member_id, email, company_domain, company_name, full_name "
-            "FROM paid_edge.audience_segment_members "
+            "FROM paid_engine_x_api.audience_segment_members "
             "WHERE segment_id = %(segment_id)s AND tenant_id = %(tenant_id)s"
         )
         result = self.clickhouse.query(

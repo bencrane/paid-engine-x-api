@@ -103,7 +103,7 @@ async def insert_linkedin_metrics(
     clickhouse,
     metrics: list[dict],
 ) -> int:
-    """Batch insert mapped metrics into paid_edge.campaign_metrics.
+    """Batch insert mapped metrics into paid_engine_x_api.campaign_metrics.
 
     Uses ReplacingMergeTree dedup on
     (tenant_id, campaign_id, platform, platform_campaign_id, date).
@@ -136,7 +136,7 @@ async def insert_linkedin_metrics(
     ]
 
     clickhouse.insert(
-        "paid_edge.campaign_metrics",
+        "paid_engine_x_api.campaign_metrics",
         data,
         column_names=columns,
     )

@@ -2,10 +2,10 @@
 
 **Version:** 2.0
 **Date:** March 24, 2026
-**Companion docs:** PaidEdge_PRD.md (product vision), PaidEdge_Backend_Spec.md (API contract), PaidEdge_Spec_Updates.md (change log)
+**Companion docs:** PaidEdge_PRD.md (product vision), paid_engine_x_Backend_Spec.md (API contract), PaidEdge_Spec_Updates.md (change log)
 **Stack:** Next.js 14+ (App Router), React 18, TypeScript, Tailwind CSS, Supabase Auth
 **Hosting:** Railway
-**Secrets:** Doppler (project: `paid-edge`, config: `dev`/`stg`/`prd`)
+**Secrets:** Doppler (project: `paid-edge-frontend-app`, config: `dev`/`stg`/`prd`)
 
 ---
 
@@ -674,4 +674,4 @@ SUPABASE_SERVICE_ROLE_KEY=xxx
 
 ---
 
-*This document is the single source of truth for the PaidEdge frontend architecture (v2.0). It should be used alongside PaidEdge_PRD.md for product context and PaidEdge_Backend_Spec.md for the API contract. Where this document conflicts with earlier versions or companion docs, this document takes precedence.*
+*This document is the single source of truth for the PaidEdge frontend architecture (v2.0). It should be used alongside PaidEdge_PRD.md for product context and paid_engine_x_Backend_Spec.md for the API contract. Where this document conflicts with earlier versions or companion docs, this document takes precedence.*

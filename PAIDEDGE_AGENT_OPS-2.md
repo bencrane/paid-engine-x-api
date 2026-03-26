@@ -11,7 +11,7 @@ Multi-tenant B2B SaaS platform for heads of demand generation. Unifies audience 
 
 **Canonical specs (all three are fully merged and up to date — no separate updates doc needed):**
 - `PaidEdge_PRD.md` (v3.0) — product vision, core loop, business model, milestones, design direction
-- `PaidEdge_Backend_Spec.md` (v2.0) — FastAPI app: every API endpoint, Supabase DDL, ClickHouse DDL, integration contracts, auth middleware
+- `paid_engine_x_Backend_Spec.md` (v2.0) — FastAPI app: every API endpoint, Supabase DDL, ClickHouse DDL, integration contracts, auth middleware
 - `PaidEdge_Frontend_Spec.md` (v2.0) — Next.js app: every route, page spec, component breakdown, data fetching, auth flow
 
 ---
@@ -22,17 +22,17 @@ Multi-tenant B2B SaaS platform for heads of demand generation. Unifies audience 
 - **Host:** `gf9xtjjqyl.us-east-1.aws.clickhouse.cloud`
 - **Port:** 8443 (HTTPS)
 - **User:** `default`
-- **Database:** `paid_edge` (PaidEdge data) — separate from DemandEdge's `raw`/`raw_crm`/`core`
+- **Database:** `paid_engine_x_api` (PaidEdge data) — separate from DemandEdge's `raw`/`raw_crm`/`core`
 - **Query via curl:**
   ```bash
   curl -s "https://gf9xtjjqyl.us-east-1.aws.clickhouse.cloud:8443" \
     --user "default:$CLICKHOUSE_PASSWORD" \
-    --data "SELECT * FROM paid_edge.campaign_metrics LIMIT 10"
+    --data "SELECT * FROM paid_engine_x_api.campaign_metrics LIMIT 10"
   ```
 - **Rule:** All queries MUST filter by `tenant_id`. No exceptions.
 - **Rule:** Do NOT touch DemandEdge databases (`raw`, `raw_crm`, `core`).
 
-### Supabase (paid-edge project)
+### Supabase (paid-engine-x-api project)
 - **Direct host:** `db.mkxlkcudcrrzfuqvdeev.supabase.co` (IPv6 only — may not work from all environments)
 - **Pooler host (use this):** `aws-0-us-west-2.pooler.supabase.com:6543`
 - **Pooler user:** `postgres.mkxlkcudcrrzfuqvdeev`
@@ -53,11 +53,11 @@ Multi-tenant B2B SaaS platform for heads of demand generation. Unifies audience 
 - **Rule:** All tables with `organization_id` have RLS policies. Respect tenant isolation.
 
 ### GitHub Repos
-- **Backend:** `bencrane/paid-edge-backend-api` — FastAPI (Python 3.12+)
+- **Backend:** `bencrane/paid-engine-x-api` — FastAPI (Python 3.12+)
 - **Frontend:** `bencrane/paid-edge-frontend-app` — Next.js 14+ (TypeScript)
 - **Access:** Via `gh` CLI with `api_credentials=["github"]`
   ```bash
-  gh repo clone bencrane/paid-edge-backend-api
+  gh repo clone bencrane/paid-engine-x-api
   gh repo clone bencrane/paid-edge-frontend-app
   ```
 - **Ignore:** `bencrane/paid-edge-master-app` (deprecated monorepo concept)
@@ -68,7 +68,7 @@ Multi-tenant B2B SaaS platform for heads of demand generation. Unifies audience 
 - Frontend: Next.js on port 3000, health check at `/`
 
 ### Doppler
-- **Project:** `paid-edge`
+- **Project:** `paid-engine-x-api`
 - **Configs:** `dev`, `stg`, `prd`
 - All secrets (Supabase, ClickHouse, RudderStack, API keys) live in Doppler. Never hardcode credentials.
 
@@ -135,7 +135,7 @@ Full ID reference file: `/home/user/workspace/linear_ids.json`
 **M1: Infrastructure Foundation** (7 issues, Priority: High, State: Todo)
 | ID | Title |
 |----|-------|
-| BJC-48 | Create paid_edge database in ClickHouse with all tables |
+| BJC-48 | Create paid_engine_x_api database in ClickHouse with all tables |
 | BJC-50 | Deploy Supabase multi-tenant schema with RLS policies |
 | BJC-54 | FastAPI backend skeleton — auth, tenant resolution, health checks |
 | BJC-58 | Next.js frontend skeleton — App Router, auth, sidebar, org switcher |
@@ -323,7 +323,7 @@ BJC-81 (audience CRUD)    ──→ BJC-87 (dashboard), BJC-88 (audiences pages)
 1. **All ClickHouse queries MUST filter by tenant_id.** No exceptions. Even admin queries should scope to a tenant.
 2. **All Supabase tables with tenant data MUST have RLS policies.** Enforce tenant isolation via `organization_id IN (SELECT organization_id FROM memberships WHERE user_id = auth.uid())`.
 3. **Frontend talks to backend only.** Never query ClickHouse or external APIs directly from the Next.js app.
-4. **Two separate repos.** `paid-edge-backend-api` (FastAPI/Python) and `paid-edge-frontend-app` (Next.js/TypeScript). Keep them cleanly separated.
+4. **Two separate repos.** `paid-engine-x-api` (FastAPI/Python) and `paid-edge-frontend-app` (Next.js/TypeScript). Keep them cleanly separated.
 5. **Doppler for all secrets.** Never hardcode credentials, API keys, or connection strings in code.
 6. **Don't touch DemandEdge infrastructure.** Existing `raw`/`raw_crm`/`core` databases, existing RudderStack sources — leave them alone.
 
@@ -361,10 +361,10 @@ These override the original specs where they conflict:
 ### GitHub Operations
 ```bash
 # Clone a repo
-gh repo clone bencrane/paid-edge-backend-api
+gh repo clone bencrane/paid-engine-x-api
 
 # Push changes
-cd /home/user/workspace/paid-edge-backend-api
+cd /home/user/workspace/paid-engine-x-api
 git add -A && git commit -m "feat: implement audience CRUD endpoints" && git push origin main
 ```
 Always use `api_credentials=["github"]` when running `gh` or `git` commands.
@@ -378,7 +378,7 @@ Always use `api_credentials=["github"]` when running `gh` or `git` commands.
 ├── PAIDEDGE_AGENT_OPS.md           ← YOU ARE HERE. Read this first.
 ├── linear_ids.json                  ← All Linear UUIDs (team, project, states, labels)
 ├── PaidEdge_PRD.md                  ← Canonical PRD v3.0 (fully merged, single source of truth)
-├── PaidEdge_Backend_Spec.md         ← Canonical backend spec v2.0 (fully merged)
+├── paid_engine_x_Backend_Spec.md         ← Canonical backend spec v2.0 (fully merged)
 ├── PaidEdge_Frontend_Spec.md        ← Canonical frontend spec v2.0 (fully merged)
 ├── created_issues_m1_m2.txt         ← Issue IDs and URLs for M1+M2
 ├── created_issues_m3_m4.txt         ← Issue IDs and URLs for M3+M4
@@ -386,7 +386,7 @@ Always use `api_credentials=["github"]` when running `gh` or `git` commands.
 │
 ├── [ARCHIVED — superseded by canonical versions above]
 ├── PaidEdge_PRD_v2-3.md             ← Original PRD (pre-merge)
-├── PaidEdge_Backend_Spec-2.md       ← Original backend spec (pre-merge)
+├── paid_engine_x_Backend_Spec-2.md       ← Original backend spec (pre-merge)
 ├── PaidEdge_Spec_Updates.md         ← Updates doc (now merged into canonical specs)
 └── paidedge_plan.md                 ← Pre-creation issue draft (now in Linear)
 ```
@@ -399,7 +399,7 @@ When you start a new session working on PaidEdge:
 
 1. **Read this file** (`PAIDEDGE_AGENT_OPS.md`)
 2. **Check Linear** for current issue states — what's Done, what's In Progress, what's next
-3. **Check the repos** — `gh repo view bencrane/paid-edge-backend-api` and `paid-edge-frontend-app` to see latest commits
+3. **Check the repos** — `gh repo view bencrane/paid-engine-x-api` and `paid-edge-frontend-app` to see latest commits
 4. **Verify infrastructure access** — ClickHouse (curl test), Supabase (psycopg2 test)
 5. **Ask Benjamin** if anything is unclear about priority or scope
 6. **Update Linear** as you work — move issues to In Progress when starting, Done when complete, add comments for notable findings

@@ -1,7 +1,7 @@
 -- BJC-190: CRM contact and opportunity tables for HubSpot/Salesforce sync.
 -- ReplacingMergeTree deduplicates on (tenant_id, crm_source, crm_*_id) using synced_at.
 
-CREATE TABLE IF NOT EXISTS paid_edge.crm_contacts (
+CREATE TABLE IF NOT EXISTS paid_engine_x_api.crm_contacts (
     tenant_id       String,
     crm_source      String,           -- 'salesforce' or 'hubspot'
     crm_contact_id  String,           -- SFDC Contact.Id or HubSpot hs_object_id
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS paid_edge.crm_contacts (
 ) ENGINE = ReplacingMergeTree(synced_at)
 ORDER BY (tenant_id, crm_source, crm_contact_id);
 
-CREATE TABLE IF NOT EXISTS paid_edge.crm_opportunities (
+CREATE TABLE IF NOT EXISTS paid_engine_x_api.crm_opportunities (
     tenant_id           String,
     crm_source          String,
     crm_opportunity_id  String,

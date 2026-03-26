@@ -1,18 +1,18 @@
-# PaidEdge Backend Spec — `paid-edge-backend-app`
+# paid-engine-x Backend Spec — `paid-engine-x-api`
 
 **Version:** 2.0  
 **Date:** March 24, 2026  
 **Companion docs:** PaidEdge_PRD.md (product vision), PaidEdge_Frontend_Spec.md (frontend)  
 **Stack:** FastAPI (Python 3.12+), Supabase (Postgres 17), ClickHouse Cloud, RudderStack, Trigger.dev  
 **Hosting:** Railway  
-**Secrets:** Doppler (project: `paid-edge`, configs: `dev`, `stg`, `prd`)
+**Secrets:** Doppler (project: `paid-engine-x-api`, configs: `dev`, `stg`, `prd`)
 
 ---
 
 ## 1. Project Structure
 
 ```
-paid-edge-backend-app/
+paid-engine-x-api/
 ├── app/
 │   ├── main.py                    # FastAPI app init, middleware, CORS
 │   ├── config.py                  # Settings via Doppler/env vars
@@ -347,12 +347,12 @@ CREATE POLICY "tenant_isolation" ON public.{table}
 ## 3. ClickHouse Schema
 
 Existing ClickHouse instance: `gf9xtjjqyl.us-east-1.aws.clickhouse.cloud`  
-New database: `paid_edge` (separate from DemandEdge's `raw`/`raw_crm`/`core`)
+New database: `paid_engine_x_api` (separate from DemandEdge's `raw`/`raw_crm`/`core`)
 
 ### 3.1 campaign_metrics
 
 ```sql
-CREATE TABLE paid_edge.campaign_metrics (
+CREATE TABLE paid_engine_x_api.campaign_metrics (
     tenant_id UUID,
     campaign_id UUID,                    -- PaidEdge campaign ID
     platform LowCardinality(String),     -- 'linkedin', 'meta', 'google'
@@ -378,7 +378,7 @@ PARTITION BY toYYYYMM(date);
 ### 3.2 crm_opportunities
 
 ```sql
-CREATE TABLE paid_edge.crm_opportunities (
+CREATE TABLE paid_engine_x_api.crm_opportunities (
     tenant_id UUID,
     opportunity_id String,
     opportunity_name String DEFAULT '',
@@ -408,7 +408,7 @@ ORDER BY (tenant_id, opportunity_id);
 ### 3.3 crm_contacts
 
 ```sql
-CREATE TABLE paid_edge.crm_contacts (
+CREATE TABLE paid_engine_x_api.crm_contacts (
     tenant_id UUID,
     contact_id String,
     email String,
@@ -435,7 +435,7 @@ ORDER BY (tenant_id, contact_id);
 Site events from RudderStack (customer site + PaidEdge landing pages).
 
 ```sql
-CREATE TABLE paid_edge.behavioral_events (
+CREATE TABLE paid_engine_x_api.behavioral_events (
     tenant_id UUID,
     anonymous_id String,
     user_id String DEFAULT '',           -- populated after identify()
@@ -463,7 +463,7 @@ PARTITION BY toYYYYMM(timestamp);
 Materialized audience members after segment refresh.
 
 ```sql
-CREATE TABLE paid_edge.audience_segment_members (
+CREATE TABLE paid_engine_x_api.audience_segment_members (
     tenant_id UUID,
     segment_id UUID,
     entity_type LowCardinality(String),  -- 'person', 'company'
@@ -486,7 +486,7 @@ ORDER BY (tenant_id, segment_id, entity_type, entity_id);
 Clay web intent deanonymization results.
 
 ```sql
-CREATE TABLE paid_edge.web_intent_results (
+CREATE TABLE paid_engine_x_api.web_intent_results (
     tenant_id UUID,
     visitor_ip String,                   -- hashed
     resolved_company_domain String DEFAULT '',
@@ -916,7 +916,7 @@ CLICKHOUSE_HOST=gf9xtjjqyl.us-east-1.aws.clickhouse.cloud
 CLICKHOUSE_PORT=8443
 CLICKHOUSE_USER=
 CLICKHOUSE_PASSWORD=
-CLICKHOUSE_DATABASE=paid_edge
+CLICKHOUSE_DATABASE=paid_engine_x_api
 
 # RudderStack
 RUDDERSTACK_DATA_PLANE_URL=https://substratevyaxk.dataplane.rudderstack.com
@@ -948,7 +948,7 @@ CORS_ORIGINS=["https://app.paidedge.com"]
 
 1. **Separate Supabase project from data-engine-x.** PaidEdge is a standalone product, not an extension of data-engine-x. Clean separation of concerns.
 
-2. **Same ClickHouse instance, new database.** `paid_edge` database lives alongside DemandEdge's `raw`/`raw_crm`/`core`. Shares compute, separate data.
+2. **Same ClickHouse instance, new database.** `paid_engine_x_api` database lives alongside DemandEdge's `raw`/`raw_crm`/`core`. Shares compute, separate data.
 
 3. **RudderStack shared source with tenant_id property.** Single JS SDK source, `tenant_id` injected via RudderStack transformation based on write key or source config. Simpler than per-tenant sources for now.
 
