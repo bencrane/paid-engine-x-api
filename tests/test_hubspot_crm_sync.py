@@ -105,8 +105,10 @@ class TestSyncTenantHubspot:
         mock_syncer.pull_contacts.return_value = [MagicMock() for _ in range(5)]
         mock_syncer.pull_opportunities.return_value = [MagicMock() for _ in range(3)]
 
-        with patch("trigger.hubspot_crm_sync.insert_crm_contacts", return_value=5) as mock_insert_c, \
-             patch("trigger.hubspot_crm_sync.insert_crm_opportunities", return_value=3) as mock_insert_o:
+        with patch("trigger.hubspot_crm_sync.sb_upsert_contacts", return_value=5), \
+             patch("trigger.hubspot_crm_sync.sb_upsert_opportunities", return_value=3), \
+             patch("trigger.hubspot_crm_sync.ch_insert_contacts", return_value=5), \
+             patch("trigger.hubspot_crm_sync.ch_insert_opportunities", return_value=3):
 
             result = await sync_tenant_hubspot(
                 tenant=SAMPLE_TENANT,
@@ -156,8 +158,10 @@ class TestSyncTenantHubspot:
         mock_syncer.pull_contacts.return_value = []
         mock_syncer.pull_opportunities.return_value = []
 
-        with patch("trigger.hubspot_crm_sync.insert_crm_contacts", return_value=0), \
-             patch("trigger.hubspot_crm_sync.insert_crm_opportunities", return_value=0):
+        with patch("trigger.hubspot_crm_sync.sb_upsert_contacts", return_value=0), \
+             patch("trigger.hubspot_crm_sync.sb_upsert_opportunities", return_value=0), \
+             patch("trigger.hubspot_crm_sync.ch_insert_contacts", return_value=0), \
+             patch("trigger.hubspot_crm_sync.ch_insert_opportunities", return_value=0):
 
             result = await sync_tenant_hubspot(
                 tenant=SAMPLE_TENANT_FIRST_SYNC,

@@ -2,9 +2,9 @@
 
 Scheduled: 0 */6 * * * (every 6 hours)
 
-Syncs HubSpot CRM data (contacts + deals + associations) to ClickHouse
-for revenue attribution and analytics. Fan-out: all HubSpot-connected
-tenants → per-tenant sync with error isolation.
+Syncs HubSpot CRM data (contacts + deals + associations) to Supabase
+(primary operational store) and ClickHouse (analytical layer). Fan-out:
+all HubSpot-connected tenants → per-tenant sync with error isolation.
 
 Pattern: mirrors trigger/audience_refresh.py.
 """
@@ -17,7 +17,10 @@ from app.db.clickhouse import get_clickhouse_client
 from app.db.supabase import get_supabase_client
 from app.integrations.hubspot_engine_x import HubSpotEngineClient
 from app.integrations.hubspot_syncer import HubSpotSyncer
-from app.services.crm_clickhouse import insert_crm_contacts, insert_crm_opportunities
+from app.services.crm_clickhouse import insert_crm_contacts as ch_insert_contacts
+from app.services.crm_clickhouse import insert_crm_opportunities as ch_insert_opportunities
+from app.services.crm_supabase import upsert_crm_contacts as sb_upsert_contacts
+from app.services.crm_supabase import upsert_crm_opportunities as sb_upsert_opportunities
 
 logger = logging.getLogger(__name__)
 
@@ -91,11 +94,15 @@ async def sync_tenant_hubspot(
     # 3. Pull opportunities with contact associations
     opportunities = await syncer.pull_opportunities(client_id, since=last_sync)
 
-    # 4. Write to ClickHouse
-    contacts_written = insert_crm_contacts(
+    # 4a. Write to Supabase (primary operational store)
+    sb_contacts = sb_upsert_contacts(contacts, org_id, "hubspot", supabase=supabase)
+    sb_opps = sb_upsert_opportunities(opportunities, org_id, "hubspot", supabase=supabase)
+
+    # 4b. Write to ClickHouse (analytical layer)
+    contacts_written = ch_insert_contacts(
         org_id, "hubspot", contacts, clickhouse=clickhouse,
     )
-    opps_written = insert_crm_opportunities(
+    opps_written = ch_insert_opportunities(
         org_id, "hubspot", opportunities, clickhouse=clickhouse,
     )
 

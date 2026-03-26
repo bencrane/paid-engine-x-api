@@ -21,6 +21,18 @@ class CRMContact(BaseModel):
     account_id: str | None = None
     lead_source: str | None = None
     lifecycle_stage: str | None = None
+    lead_status: str | None = None
+    job_title: str | None = None
+    phone: str | None = None
+    company_size: int | None = None
+    industry: str | None = None
+    linkedin_url: str | None = None
+    owner_id: str | None = None
+    utm_source: str | None = None
+    utm_medium: str | None = None
+    utm_campaign: str | None = None
+    utm_term: str | None = None
+    utm_content: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -33,11 +45,18 @@ class CRMOpportunity(BaseModel):
     amount: float | None = None
     close_date: date | None = None
     stage: str
+    pipeline: str | None = None
     is_closed: bool = False
     is_won: bool = False
     account_id: str | None = None
     lead_source: str | None = None
     contact_ids: list[str] = Field(default_factory=list)
+    owner_id: str | None = None
+    utm_source: str | None = None
+    utm_medium: str | None = None
+    utm_campaign: str | None = None
+    utm_term: str | None = None
+    utm_content: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 

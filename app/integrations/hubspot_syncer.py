@@ -25,6 +25,9 @@ logger = logging.getLogger(__name__)
 CONTACT_PROPERTIES = [
     "email", "firstname", "lastname", "company", "associatedcompanyid",
     "hs_lead_status", "lifecyclestage", "createdate", "lastmodifieddate",
+    "jobtitle", "phone", "numemployees", "industry", "hs_linkedinid",
+    "hubspot_owner_id",
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
 ]
 
 DEAL_PROPERTIES = [
@@ -32,6 +35,8 @@ DEAL_PROPERTIES = [
     "hs_is_closed", "hs_is_closed_won", "hs_object_id",
     "associatedcompanyid", "hs_lead_source",
     "createdate", "hs_lastmodifieddate",
+    "hubspot_owner_id",
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
 ]
 
 
@@ -54,6 +59,7 @@ class HubSpotSyncer(BaseCRMSyncer):
     def _normalize_contact(self, record: dict[str, Any]) -> CRMContact:
         """Convert a HubSpot contact record to canonical CRMContact."""
         p = _props(record)
+        num_employees = p.get("numemployees")
         return CRMContact(
             crm_contact_id=_hs_id(record),
             email=p.get("email", ""),
@@ -63,6 +69,18 @@ class HubSpotSyncer(BaseCRMSyncer):
             account_id=p.get("associatedcompanyid"),
             lead_source=p.get("hs_lead_status"),
             lifecycle_stage=p.get("lifecyclestage"),
+            lead_status=p.get("hs_lead_status"),
+            job_title=p.get("jobtitle"),
+            phone=p.get("phone"),
+            company_size=int(num_employees) if num_employees and str(num_employees).isdigit() else None,
+            industry=p.get("industry"),
+            linkedin_url=p.get("hs_linkedinid"),
+            owner_id=p.get("hubspot_owner_id"),
+            utm_source=p.get("utm_source"),
+            utm_medium=p.get("utm_medium"),
+            utm_campaign=p.get("utm_campaign"),
+            utm_term=p.get("utm_term"),
+            utm_content=p.get("utm_content"),
             created_at=parse_hs_datetime(p.get("createdate")),
             updated_at=parse_hs_datetime(p.get("lastmodifieddate")),
         )
@@ -80,11 +98,18 @@ class HubSpotSyncer(BaseCRMSyncer):
             amount=parse_hs_float(p.get("amount")),
             close_date=parse_hs_date(p.get("closedate")),
             stage=p.get("dealstage", ""),
+            pipeline=p.get("pipeline"),
             is_closed=parse_hs_bool(p.get("hs_is_closed")),
             is_won=parse_hs_bool(p.get("hs_is_closed_won")),
             account_id=p.get("associatedcompanyid"),
             lead_source=p.get("hs_lead_source"),
             contact_ids=contact_ids or [],
+            owner_id=p.get("hubspot_owner_id"),
+            utm_source=p.get("utm_source"),
+            utm_medium=p.get("utm_medium"),
+            utm_campaign=p.get("utm_campaign"),
+            utm_term=p.get("utm_term"),
+            utm_content=p.get("utm_content"),
             created_at=parse_hs_datetime(p.get("createdate")),
             updated_at=parse_hs_datetime(p.get("hs_lastmodifieddate")),
         )
