@@ -6,9 +6,8 @@ Fire-and-forget inserts — tracking failures never break generation.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from supabase import Client as SupabaseClient
 
 logger = logging.getLogger(__name__)

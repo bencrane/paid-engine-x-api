@@ -65,7 +65,7 @@ def register_error_handlers(app: FastAPI) -> None:
         # Convert Pydantic validation errors to structured format
         field_errors = []
         for err in exc.errors():
-            loc = " → ".join(str(l) for l in err.get("loc", []))
+            loc = " → ".join(str(part) for part in err.get("loc", []))
             field_errors.append({"field": loc, "message": err.get("msg", "")})
 
         return _error_response(

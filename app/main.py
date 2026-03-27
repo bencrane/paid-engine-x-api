@@ -127,7 +127,7 @@ async def health_ready():
     t0 = time.monotonic()
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.get("https://api.anthropic.com/v1/messages")
+            await client.get("https://api.anthropic.com/v1/messages")
             # Even 401 means the API is reachable
             latency = int((time.monotonic() - t0) * 1000)
             checks["claude_api"] = CheckResult(status="ok", latency_ms=latency)
