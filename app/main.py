@@ -16,6 +16,7 @@ from app.config import settings
 from app.landing_pages.router import router as landing_pages_router
 from app.shared.models import HealthResponse
 from app.tenants.router import router as tenants_router
+from app.usage.router import router as usage_router
 
 app = FastAPI(
     title="PaidEdge API",
@@ -50,6 +51,7 @@ app.include_router(analytics_router)
 app.include_router(attribution_router)
 app.include_router(landing_pages_router)
 app.include_router(tenants_router)
+app.include_router(usage_router)
 
 
 # --- Health check ---
